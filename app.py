@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
-import json
 import sqlite3
+from flask_cors import CORS
 
 app = Flask(__name__)
+
+CORS(app)
 
 def db_connection():
     conn = None
@@ -11,6 +13,7 @@ def db_connection():
     except sqlite3.error as e:
         print(e)
     return conn
+
 
 @app.route("/login", methods=["GET", "POST"])
 def items():
@@ -34,8 +37,50 @@ def items():
                  VALUES (?, ?, ?)"""
         cursor = cursor.execute(sql, (new_product, new_price, new_qty))
         conn.commit()
-        return f"Book with the id: 0 created successfully", 201
+        return "Item created successfully", 201
 
+
+@app.route('/item/<int:pid>', methods=['GET', 'PUT', 'DELETE'])
+# functionn to get 1 item using its pid
+def single_item(pid):
+    conn = db_connection()
+    cursor = conn.cursor()
+    item = None
+
+    if request.method == 'GET':
+        cursor.execute("SELECT * FROM inventory WHERE pid=?", (pid,))
+        rows = cursor.fetchall()
+        for r in rows:
+            item = r
+        if item is not None:
+            return jsonify(item), 200
+        else:
+            return "Something wrong", 404
+
+    if request.method == 'PUT':
+        sql = """UPDATE inventory
+                SET product=?,
+                    price=?,
+                    quantity=?
+                WHERE pid=? """
+        product = request.form["product"]
+        price = request.form["price"]
+        quantity = request.form["quantity"]
+        updated_item = {
+            "pid": pid,
+            "product": product,
+            "price": price,
+            "quantity": quantity,
+        }
+        conn.execute(sql, (product, price, quantity, pid))
+        conn.commit()
+        return jsonify(updated_item)
+
+    if request.method == "DELETE":
+        sql = """ DELETE FROM inventory WHERE pid=? """
+        conn.execute(sql, (pid,))
+        conn.commit()
+        return "The Item with pid: {} has been deleted.".format(pid), 200
 
 
 if __name__ == '__main__':
