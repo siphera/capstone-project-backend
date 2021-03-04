@@ -14,8 +14,17 @@ def db_connection():
         print(e)
     return conn
 
+# user login route
+@app.route('/login', methods=["GET"])
+def login():
+    conn = db_connection()
+    cursor = conn.cursor()
 
-@app.route("/login", methods=["GET", "POST"])
+    if request.method == "GET":
+        
+
+
+@app.route("/items", methods=["GET", "POST"])
 def items():
     conn = db_connection()
     cursor = conn.cursor()
@@ -131,7 +140,7 @@ def busket(pid):
 @app.route('/total', methods=["GET"])
 def total():
     conn = db_connection()
-    cursor = conn.cursor()  
+    cursor = conn.cursor()
 
     if request.method == "GET":
         cursor = conn.execute("SELECT SUM(price) FROM busket")
