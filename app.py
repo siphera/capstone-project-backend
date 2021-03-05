@@ -21,7 +21,7 @@ def login():
     cursor = conn.cursor()
 
     if request.method == "GET":
-        
+        pass
 
 
 @app.route("/items", methods=["GET", "POST"])
