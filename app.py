@@ -14,14 +14,30 @@ def db_connection():
         print(e)
     return conn
 
-# user login route
-@app.route('/login', methods=["GET"])
+
+# user register/login route
+@app.route("/login", methods=["GET", "POST"])
 def login():
     conn = db_connection()
     cursor = conn.cursor()
 
     if request.method == "GET":
-        pass
+        cursor = conn.execute("SELECT * FROM users")
+        users = [
+            dict(id=row[0], username=row[1], role=row[2], password=row[3])
+            for row in cursor.fetchall()
+        ]
+        if users is not None:
+            return jsonify(users)
+
+    if request.method == "POST":
+        new_username = request.form["username"]
+        new_role = request.form["role"]
+        new_password = request.form["password"]
+        sql = """ INSERT INTO users (username, role, password) VALUES (?, ?, ?) """
+        cursor = cursor.execute(sql, (new_username, new_role, new_password))
+        conn.commit()
+        return "New user added successfully", 201
 
 
 @app.route("/items", methods=["GET", "POST"])
@@ -44,7 +60,7 @@ def items():
         new_qty = request.form["quantity"]
         sql = """INSERT INTO inventory (product, price, quantity)
                  VALUES (?, ?, ?)"""
-        cursor = cursor.execute(sql, (new_product, new_price, new_qty))
+        cursor.execute(sql, (new_product, new_price, new_qty))
         conn.commit()
         return "Item created successfully", 201
 
