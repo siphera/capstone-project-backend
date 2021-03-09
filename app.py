@@ -15,29 +15,71 @@ def db_connection():
     return conn
 
 
-# user register/login route
-@app.route("/login", methods=["GET", "POST"])
+# user login route
+# @app.route("/login", methods=["GET"])
+# def login():
+#     conn = db_connection()
+#     cursor = conn.cursor()
+#
+#     if request.method == "GET":
+#         cursor = conn.execute("SELECT * FROM users")
+#         users = [
+#             dict(id=row[0], username=row[1], role=row[2], password=row[3])
+#             for row in cursor.fetchall()
+#         ]
+#         if users is not None:
+#             return jsonify(users)
+
+# ================================================================
+@app.route('/login/', methods=['GET'])
 def login():
-    conn = db_connection()
-    cursor = conn.cursor()
-
+    records = {}
     if request.method == "GET":
-        cursor = conn.execute("SELECT * FROM users")
-        users = [
-            dict(id=row[0], username=row[1], role=row[2], password=row[3])
-            for row in cursor.fetchall()
-        ]
-        if users is not None:
-            return jsonify(users)
+        msg = None
+        try:
+            post_data = request.get_json()
+            user = post_data['username']
+            password = post_data['password']
 
+            with sqlite3.connect('pos.sqlite') as con:
+                cur = con.cursor()
+                sql = "SELECT * FROM users WHERE username = ? and password = ?"
+                cur.execute(sql, [user, password])
+                records = cur.fetchall()
+
+        except Exception as e:
+            con.rollback()
+            msg = "error occured while fetching data from db" + str(e)
+        finally:
+            # con.close()
+            return jsonify(records)
+
+
+# register a new user
+@app.route('/register/', methods=['POST'])
+def reg_new_user():
+    msg = None
     if request.method == "POST":
-        new_username = request.form["username"]
-        new_role = request.form["role"]
-        new_password = request.form["password"]
-        sql = """ INSERT INTO users (username, role, password) VALUES (?, ?, ?) """
-        cursor = cursor.execute(sql, (new_username, new_role, new_password))
-        conn.commit()
-        return "New user added successfully", 201
+        try:
+            post_data = request.get_json()
+            username = post_data['username']
+            role = post_data['role']
+            password = post_data['password']
+
+            with sqlite3.connect('pos.sqlite') as con:
+                cur = con.cursor()
+                cur.execute("INSERT INTO users (username, role, password) VALUES (?, ?, ?)",
+                            (username, role, password))
+                con.commit()
+                msg = "user added successfully ."
+
+        except Exception as e:
+            con.rollback()
+            msg = "Error occurred in insert operation: " + str(e)
+
+        finally:
+            # con.close()
+            return jsonify(msg)
 
 
 @app.route("/items", methods=["GET", "POST"])
