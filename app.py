@@ -6,6 +6,7 @@ app = Flask(__name__)
 
 CORS(app)
 
+
 def db_connection():
     conn = None
     try:
@@ -49,7 +50,7 @@ def login():
 
         except Exception as e:
             con.rollback()
-            msg = "error occured while fetching data from db" + str(e)
+            msg = "error occurred while fetching data from db" + str(e)
         finally:
             # con.close()
             return jsonify(records)
@@ -82,7 +83,7 @@ def reg_new_user():
             return jsonify(msg)
 
 
-@app.route("/items", methods=["GET", "POST"])
+@app.route("/items/", methods=["GET", "POST"])
 def items():
     conn = db_connection()
     cursor = conn.cursor()
@@ -97,14 +98,26 @@ def items():
             return jsonify(items)
 
     if request.method == "POST":
-        new_product = request.form["product"]
-        new_price = request.form["price"]
-        new_qty = request.form["quantity"]
-        sql = """INSERT INTO inventory (product, price, quantity)
-                 VALUES (?, ?, ?)"""
-        cursor.execute(sql, (new_product, new_price, new_qty))
-        conn.commit()
-        return "Item created successfully", 201
+        try:
+            post_data = request.get_json()
+            product = post_data['product']
+            price = post_data['price']
+            quantity = post_data['quantity']
+
+            with sqlite3.connect('pos.sqlite') as con:
+                cur = con.cursor()
+                cur.execute("INSERT INTO inventory (product, price, quantity) VALUES (?, ?, ?)",
+                            (product, price, quantity))
+                con.commit()
+                msg = "Item created successfully ."
+
+        except Exception as e:
+            con.rollback()
+            msg = "Error occurred in insert operation: " + str(e)
+
+        finally:
+            # con.close()
+            return jsonify(msg)
 
 
 @app.route('/item/<int:pid>', methods=['GET', 'PUT', 'DELETE'])
@@ -203,6 +216,18 @@ def total():
     if request.method == "GET":
         cursor = conn.execute("SELECT SUM(price) FROM busket")
 
+        res = cursor.fetchall()
+        if res is not None:
+            return jsonify(res)
+
+
+@app.route('/totalitems', methods=["GET"])
+def total_quantity():
+    conn = db_connection()
+    cursor = conn.cursor()
+
+    if request.method == "GET":
+        cursor = conn.execute("SELECT SUM(quantity) FROM inventory")
         res = cursor.fetchall()
         if res is not None:
             return jsonify(res)
