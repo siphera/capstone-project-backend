@@ -11,7 +11,7 @@ users_query = """ CREATE TABLE IF NOT EXISTS users (
 )"""
 
 cursor.execute(users_query)
-cursor = conn.cursor()
+
 inv_query = """ CREATE TABLE IF NOT EXISTS inventory (
     pid integer PRIMARY KEY,
     product text NOT NULL,
@@ -21,12 +21,10 @@ inv_query = """ CREATE TABLE IF NOT EXISTS inventory (
 
 cursor.execute(inv_query)
 
-cursor = conn.cursor()
-busket_query = """ CREATE TABLE IF NOT EXISTS busket (
+basket_query = """ CREATE TABLE IF NOT EXISTS basket (
     pid integer PRIMARY KEY,
     product text NOT NULL,
-    price integer NOT NULL,
-    quantity integer NOT NULL
+    price integer NOT NULL
 )"""
 
-cursor.execute(busket_query)
+cursor.execute(basket_query)

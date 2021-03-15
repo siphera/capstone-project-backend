@@ -3,8 +3,13 @@ import sqlite3
 from flask_cors import CORS
 
 app = Flask(__name__)
-
 CORS(app)
+
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
 
 
 def db_connection():
@@ -32,29 +37,6 @@ def db_connection():
 #             return jsonify(users)
 
 # ================================================================
-@app.route('/login/', methods=['GET'])
-def login():
-    records = {}
-    if request.method == "GET":
-        msg = None
-        try:
-            post_data = request.get_json()
-            user = post_data['username']
-            password = post_data['password']
-
-            with sqlite3.connect('pos.sqlite') as con:
-                cur = con.cursor()
-                sql = "SELECT * FROM users WHERE username = ? and password = ?"
-                cur.execute(sql, [user, password])
-                records = cur.fetchall()
-
-        except Exception as e:
-            con.rollback()
-            msg = "error occurred while fetching data from db" + str(e)
-        finally:
-            # con.close()
-            return jsonify(records)
-
 
 # register a new user
 @app.route('/register/', methods=['POST'])
@@ -81,6 +63,47 @@ def reg_new_user():
         finally:
             # con.close()
             return jsonify(msg)
+
+@app.route('/login/', methods=['GET'])
+def show_records():
+    records = []
+    try:
+        with sqlite3.connect('pos.sqlite') as con:
+            con.row_factory = dict_factory
+            cur = con.cursor()
+            cur.execute("SELECT * FROM users")
+            records = cur.fetchall()
+
+    except Exception as e:
+        con.rollback()
+        print("There was an error fetching results from the database.")
+    finally:
+        con.close()
+        return jsonify(records)
+
+
+'''@app.route('/login/', methods=['GET', 'POST'])
+def login():
+    records = {}
+    if request.method == "GET":
+        msg = None
+        try:
+            post_data = request.get_json()
+            username = post_data['username']
+            password = post_data['password']
+
+            with sqlite3.connect('pos.sqlite') as con:
+                cur = con.cursor()
+                sql = "SELECT * FROM users WHERE username=? and password=?"
+                cur.execute(sql, [username, password])
+                # records = cur.fetchall()
+        except Exception as e:
+            con.rollback()
+            msg = "Error occurred in insert operation: " + str(e)
+
+        finally:
+            con.close()
+            return jsonify(msg=msg)'''
 
 
 @app.route("/items/", methods=["GET", "POST"])
@@ -163,15 +186,15 @@ def single_item(pid):
         return "The Item with pid: {} has been deleted.".format(pid), 200
 
 
-@app.route("/busk", methods=["GET", "POST"])
-def busket_items():
+@app.route("/bask", methods=["GET", "POST"])
+def basket_items():
     conn = db_connection()
     cursor = conn.cursor()
 
     if request.method == "GET":
-        cursor = conn.execute("SELECT * FROM busket")
+        cursor = conn.execute("SELECT * FROM basket")
         busket_items = [
-            dict(pid=row[0], product=row[1], price=row[2], quantity=row[3])
+            dict(pid=row[0], product=row[1], price=row[2])
             for row in cursor.fetchall()
         ]
         if busket_items is not None:
@@ -180,16 +203,16 @@ def busket_items():
     if request.method == "POST":
         new_product = request.form["product"]
         new_price = request.form["price"]
-        new_qty = request.form["quantity"]
-        sql = """INSERT INTO busket (product, price, quantity)
-                 VALUES (?, ?, ?)"""
-        cursor = cursor.execute(sql, (new_product, new_price, new_qty))
+        # new_qty = request.form["quantity"]
+        sql = """INSERT INTO basket (product, price)
+                 VALUES (?, ?)"""
+        cursor = cursor.execute(sql, (new_product, new_price))
         conn.commit()
         return "Item created successfully", 201
 
 
-@app.route('/busket/<int:pid>', methods=['GET', 'PUT', 'DELETE'])
-def busket(pid):
+@app.route('/basket/<int:pid>', methods=['GET', 'PUT', 'DELETE'])
+def basket(pid):
     conn = db_connection()
     cursor = conn.cursor()
     item = None
@@ -214,7 +237,7 @@ def total():
     cursor = conn.cursor()
 
     if request.method == "GET":
-        cursor = conn.execute("SELECT SUM(price) FROM busket")
+        cursor = conn.execute("SELECT SUM(price) FROM basket")
 
         res = cursor.fetchall()
         if res is not None:
